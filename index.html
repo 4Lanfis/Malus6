@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Malus Stufe 6 - Cyber Chaos Stream</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: #020408;
+            color: #38bdf8;
+            overflow-x: hidden;
+        }
+
+        /* Matrix Rain Background Canvas */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.15;
+        }
+
+        /* Ambient Glow & Chaos Mesh */
+        .glow-bg {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100vw;
+            height: 100vh;
+            background: 
+                radial-gradient(circle at 10% 20%, rgba(236, 72, 153, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(56, 189, 248, 0.15) 0%, transparent 45%),
+                radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.08) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Unübersichtliches Glitch Glass Panel */
+        .cyber-panel {
+            background: rgba(6, 11, 25, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            box-shadow: 0 0 35px rgba(56, 189, 248, 0.15), inset 0 0 15px rgba(236, 72, 153, 0.1);
+        }
+
+        /* Custom Dense Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(2, 4, 8, 0.9);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ec4899;
+            box-shadow: 0 0 10px #ec4899;
+        }
+
+        /* Chaotische Pass-Item Interaktivität */
+        .pass-item {
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            padding: 2px 4px;
+            border-radius: 2px;
+            display: inline-block;
+            word-break: keep-all;
+            white-space: nowrap;
+            letter-spacing: -0.02em;
+            position: relative;
+        }
+        .pass-item:hover {
+            color: #00ffcc;
+            background-color: rgba(236, 72, 153, 0.25);
+            text-shadow: 0 0 8px #00ffcc, 0 0 15px #ec4899;
+            transform: scale(1.05) rotate(0.5deg);
+            z-index: 30;
+        }
+        .pass-item:active {
+            transform: scale(0.92);
+        }
+
+        /* Copied Glitch State */
+        .pass-item.copied {
+            color: #f43f5e !important;
+            background-color: rgba(244, 63, 94, 0.3) !important;
+            text-shadow: 0 0 12px #f43f5e, 0 0 20px #e11d48;
+            animation: glitch-pulse 0.4s ease-in-out;
+        }
+
+        @keyframes glitch-pulse {
+            0% { transform: translate(-2px, 1px); }
+            50% { transform: translate(2px, -1px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        /* Heavy CRT Scanlines & Visual Noise Overlay */
+        .crt-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.4) 50%
+            ), linear-gradient(
+                90deg,
+                rgba(255, 0, 0, 0.03),
+                rgba(0, 255, 0, 0.01),
+                rgba(0, 0, 255, 0.03)
+            );
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+            z-index: 20;
+            opacity: 0.6;
+        }
+
+        /* Pulsierendes Cyber HUD Element */
+        .hud-line {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #ec4899, #38bdf8, transparent);
+            animation: hud-sweep 3s infinite linear;
+        }
+
+        @keyframes hud-sweep {
+            0% { opacity: 0.2; transform: scaleX(0.8); }
+            50% { opacity: 1; transform: scaleX(1.05); }
+            100% { opacity: 0.2; transform: scaleX(0.8); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 select-none relative">
+
+    <!-- Matrix Rain Canvas Background -->
+    <canvas id="bg-canvas"></canvas>
+    <div class="glow-bg"></div>
+
+    <!-- Floating Cyber Toast Notification -->
+    <div id="toast" class="fixed top-3 bg-black/90 border border-pink-500/80 text-pink-400 font-extrabold px-4 py-2 text-xs font-mono shadow-[0_0_25px_rgba(236,72,153,0.6)] transition-all duration-200 -translate-y-24 opacity-0 z-50 rounded-none flex items-center gap-2">
+        <span class="w-2 h-2 bg-pink-500 animate-ping"></span>
+        <span id="toast-message">STREAM_OVERRIDE</span>
+    </div>
+
+    <!-- Main Container -->
+    <div class="w-full max-w-7xl cyber-panel p-3 sm:p-5 rounded-none relative z-10 overflow-hidden">
+        <div class="crt-overlay"></div>
+        
+        <!-- Chaotic Header Area -->
+        <div class="border-b border-cyan-500/30 pb-3 mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 relative">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="h-2 w-2 bg-pink-500 animate-pulse"></span>
+                    <h1 class="text-xl sm:text-3xl font-black tracking-tighter bg-gradient-to-r from-pink-500 via-cyan-400 to-purple-500 bg-clip-text text-transparent uppercase">
+                        MALUS STUFE 6 // OVERLOAD
+                    </h1>
+                </div>
+                <p class="text-[9px] text-pink-500/70 font-mono tracking-widest mt-0.5">
+                    SYS_ERR: 250 DENSE CYBER STREAM DATA NODES [NO_SEARCH_PROTOCOL]
+                </p>
+            </div>
+            
+            <!-- Controls & Live Counter -->
+            <div class="flex items-center gap-2">
+                <button onclick="resetStats()" class="bg-pink-950/40 hover:bg-pink-900/60 text-pink-400 border border-pink-500/40 text-[10px] px-2.5 py-1 transition-all font-mono tracking-widest uppercase">
+                    [PURGE_CACHE]
+                </button>
+            </div>
+        </div>
+
+        <div class="hud-line mb-3"></div>
+
+        <!-- Metric Counter Bar -->
+        <div class="grid grid-cols-3 gap-2 mb-3 text-[10px] font-mono">
+            <div class="bg-black/60 p-1.5 border border-cyan-500/20 text-center">
+                <span class="text-cyan-600 block text-[8px]">TOTAL_NODES</span>
+                <span id="stat-total" class="text-cyan-400 font-black text-xs sm:text-sm">250</span>
+            </div>
+            <div class="bg-black/60 p-1.5 border border-pink-500/20 text-center">
+                <span class="text-pink-600 block text-[8px]">BUFFER_COPIED</span>
+                <span id="stat-copied" class="text-pink-400 font-black text-xs sm:text-sm">0 / 250</span>
+            </div>
+            <div class="bg-black/60 p-1.5 border border-purple-500/20 text-center">
+                <span class="text-purple-600 block text-[8px]">GRID_DENSITY</span>
+                <span class="text-purple-400 font-black text-xs sm:text-sm">4 COLUMNS</span>
+            </div>
+        </div>
+
+        <!-- High-Density Inline Password Grid (Exakt 4 Spalten, Unübersichtlich & Eng) -->
+        <div id="password-stream" class="font-mono text-[9px] sm:text-[11px] leading-tight max-h-[68vh] overflow-y-auto p-1.5 grid grid-cols-4 gap-x-1 gap-y-1 text-center bg-black/80 border border-cyan-900/40">
+            <!-- Items via JavaScript -->
+        </div>
+
+        <!-- Footer Info -->
+        <div class="mt-3 pt-2 border-t border-cyan-500/20 flex flex-col sm:flex-row justify-between items-center text-[9px] text-gray-600 font-mono gap-1">
+            <div class="flex items-center gap-1.5">
+                <span class="inline-block w-1.5 h-1.5 bg-pink-500 animate-ping"></span>
+                <span class="text-cyan-500/80">CHAOS_ENGINE: ACTIVE // CLICK ITEM TO INTERCEPT</span>
+            </div>
+            <span class="text-pink-500/60">UNAUTHORIZED MEMORY READ // NO INDEXING</span>
+        </div>
+    </div>
+
+    <script>
+        // Matrix Rain Background Effect
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const matrixChars = "0123456789ABCDEFABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&*+-/<=>?";
+        const fontSize = 12;
+        let columns = Math.floor(canvas.width / fontSize);
+        let drops = Array(columns).fill(1);
+
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(2, 4, 8, 0.1)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "#ec4899";
+            ctx.font = fontSize + "px 'JetBrains Mono'";
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = matrixChars.charAt(Math.floor(Math.random() * matrixChars.length));
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 33);
+
+        // Exakt 250 eindeutige 16-stellige Passwörter
+        const FIXED_PASSWORDS_250 = [
+            // 001 - 025
+            "xK9#mP2$vL8!qN5w", "aR7&tW4*yU1^zB9q", "mK3$vP8!qN5wX9#L", "bT8*yU2^zB9qC4@x", "pW5!qN9wX2#LmR7$",
+            "cJ9^zB1qC5@xD3&y", "vN2wX8#LmS4$pQ6!", "dK4@xD6&yE8*zF1^", "zX7#LmP3$qN9!wV2", "eM5&yF9*zG2^aH4@",
+            "fP1!qR3$wS5#tT7*", "gQ8^zH2@aJ4&bK6$", "hR9*aK3#bL5!cM7%", "jS2$bL4!cM6*dN8^", "kT3%cM5*dN7^eP9@",
+            "lU4^dN6@eP8$fQ1*", "mV5@eP7$fQ9*gR2#", "nW6$fQ8*gR1#hS3!", "pX7*gR9#hS2!jT4%", "qY8#hS1!jT3%kU5^",
+            "rZ9!jT2%kU4^lV6@", "sA1%kU3^lV5@mW7$", "tB2^lV4@mW6$nX8*", "uC3@mW5$nX7*pY9#", "vD4$nX6*pY8#qZ1!",
+            
+            // 026 - 050
+            "wE5*pY7#qZ9!rA2%", "xF6#qZ8!rA1%sB3^", "yG7!rA9%sB2^tC4@", "zH8%sB1^tC3@uD5$", "aJ9^tC2@uD4$vE6*",
+            "bK1@uD3$vE5*wF7#", "cL2$vE4*wF6#xG8!", "dM3*wF5#xG7!yH9%", "eN4#xG6!yH8%zJ1^", "fP5!yH7%zJ9^aK2@",
+            "gQ6%zJ8^aK1@bL3$", "hR7^aK9@bL2$cM4*", "jS8@bL1$cM3*dN5#", "kT9$cM2*dN4#eP6!", "lU1*dN3#eP5!fQ7%",
+            "mV2#eP4!fQ6%gR8^", "nW3!fQ5%gR7^hS9@", "pX4%gR6^hS8@jT1$", "qY5^hS7@jT9$kU2*", "rZ6@jT8$kU1*lV3#",
+            "sA7$kU9*lV2#mW4!", "tB8*lV1#mW3!nX5%", "uC9#mW2!nX4%pY6^", "vD1!nX3%pY5^qZ7@", "wE2%pY4^qZ6@rA8$",
+
+            // 051 - 075
+            "N1#aB2$cD3%eF4^g", "H5&jK6*mL7(nP8)q", "Q9!wE8@rT7#yU6$i", "O5%pI4^uY3&tR2*e", "A1@sD2#fG3$hJ4%k",
+            "L5^zX6&cC7*vB8(n", "M9)qW8!eR7@tY6#u", "I5$oP4%aS3&dF2*g", "H1^jK2@lZ3#xC4$v", "B5%nM6^qW7&eR8*t",
+            "Y9!uI8@oP7#aSD6$", "F5%gH4^jK3&lZ2*x", "C1@vB2#nM3$qW4%e", "R5^tY6&uI7*oP8(a", "S9)dF8!gH7@jK6#l",
+            "Z5$xC4%vB3&nM2*q", "W1^eR2@tY3#uI4$o", "P5%aS6^dF7&gH8*j", "K9!lZ8@xC7#vB6$n", "M5%qW4^eR3&tY2*u",
+            "I1@oP2#aS3$dF4%g", "H5^jK6&lZ7*xC8(v", "B9)nM8!qW7@eR6#t", "Y5$uI4%oP3&aS2*d", "F1^gH2@jK3#lZ4$x",
+
+            // 076 - 100
+            "C5%vB6^nM7&qW8*e", "R9!tY8@uI7#oP6$a", "S5%dF4^gH3&jK2*l", "Z1@xC2#vB3$nM4%q", "W5^eR6&tY7*uI8(o",
+            "P9)aS8!dF7@gH6#j", "K5$lZ4%xC3&vB2*n", "M1^qW2@eR3#tY4$u", "I5%oP6^aS7&dF8*g", "H9!jK8@lZ7#xC6$v",
+            "B5%nM4^qW3&eR2*t", "Y1@uI2#oP3$aS4%7", "F5^gH6&jK7*lZ8(8", "C9)vB8!nM7@qW6#9", "R5$tY4%uI3&oP2*0",
+            "S1^dF2@gH3#jK4$1", "Z5%xC6^vB7&nM8*2", "W9!eR8@tY7#uI6$3", "P5%aS4^dF3&gH2*4", "K1@lZ2#xC3$vB4%5",
+            "xK9#mP2$vL8!qN51", "aR7&tW4*yU1^zB92", "mK3$vP8!qN5wX9#3", "bT8*yU2^zB9qC4@4", "pW5!qN9wX2#LmR75",
+
+            // 101 - 125
+            "cJ9^zB1qC5@xD3&6", "vN2wX8#LmS4$pQ67", "dK4@xD6&yE8*zF18", "zX7#LmP3$qN9!wV9", "eM5&yF9*zG2^aH40",
+            "fP1!qR3$wS5#tT71", "gQ8^zH2@aJ4&bK62", "hR9*aK3#bL5!cM73", "jS2$bL4!cM6*dN84", "kT3%cM5*dN7^eP95",
+            "lU4^dN6@eP8$fQ16", "mV5@eP7$fQ9*gR27", "nW6$fQ8*gR1#hS38", "pX7*gR9#hS2!jT49", "qY8#hS1!jT3%kU50",
+            "rZ9!jT2%kU4^lV61", "sA1%kU3^lV5@mW72", "tB2^lV4@mW6$nX83", "uC3@mW5$nX7*pY94", "vD4$nX6*pY8#qZ15",
+            "wE5*pY7#qZ9!rA26", "xF6#qZ8!rA1%sB37", "yG7!rA9%sB2^tC48", "zH8%sB1^tC3@uD59", "aJ9^tC2@uD4$vE60",
+
+            // 126 - 150
+            "bK1@uD3$vE5*wF71", "cL2$vE4*wF6#xG82", "dM3*wF5#xG7!yH93", "eN4#xG6!yH8%zJ14", "fP5!yH7%zJ9^aK25",
+            "gQ6%zJ8^aK1@bL36", "nR7^aK9@bL2$cM47", "jS8@bL1$cM3*dN58", "kT9$cM2*dN4#eP69", "lU1*dN3#eP5!fQ70",
+            "mV2#eP4!fQ6%gR81", "nW3!fQ5%gR7^hS92", "pX4%gR6^hS8@jT13", "qY5^hS7@jT9$kU24", "rZ6@jT8$kU1*lV35",
+            "sA7$kU9*lV2#mW46", "tB8*lV1#mW3!nX57", "uC9#mW2!nX4%pY68", "vD1!nX3%pY5^qZ79", "wE2%pY4^qZ6@rA80",
+            "N1#aB2$cD3%eF4^1", "H5&jK6*mL7(nP8)2", "Q9!wE8@rT7#yU6$3", "O5%pI4^uY3&tR2*4", "A1@sD2#fG3$hJ4%5",
+
+            // 151 - 175
+            "L5^zX6&cC7*vB8(6", "M9)qW8!eR7@tY6#7", "I5$oP4%aS3&dF2*8", "H1^jK2@lZ3#xC4$9", "B5%nM6^qW7&eR8*0",
+            "Y9!uI8@oP7#aSD61", "F5%gH4^jK3&lZ2*2", "C1@vB2#nM3$qW4%3", "R5^tY6&uI7*oP8(4", "S9)dF8!gH7@jK6#5",
+            "Z5$xC4%vB3&nM2*6", "W1^eR2@tY3#uI4$7", "P5%aS6^dF7&gH8*8", "K9!lZ8@xC7#vB6$9", "M5%qW4^eR3&tY2*0",
+            "I1@oP2#aS3$dF4%1", "H5^jK6&lZ7*xC8(2", "B9)nM8!qW7@eR6#3", "Y5$uI4%oP3&aS2*4", "F1^gH2@jK3#lZ4$5",
+            "C5%vB6^nM7&qW8*6", "R9!tY8@uI7#oP6$7", "S5%dF4^gH3&jK2*8", "Z1@xC2#vB3$nM4%9", "W5^eR6&tY7*uI8(0",
+
+            // 176 - 200
+            "P9)aS8!dF7@gH6#1", "K5$lZ4%xC3&vB2*2", "M1^qW2@eR3#tY4$3", "I5%oP6^aS7&dF8*4", "H9!jK8@lZ7#xC6$5",
+            "B5%nM4^qW3&eR2*6", "Y1@uI2#oP3$aS4%7", "F5^gH6&jK7*lZ8(8", "C9)vB8!nM7@qW6#9", "R5$tY4%uI3&oP2*0",
+            "S1^dF2@gH3#jK4$1", "Z5%xC6^vB7&nM8*2", "W9!eR8@tY7#uI6$3", "P5%aS4^dF3&gH2*4", "K1@lZ2#xC3$vB4%5",
+            "aK9#mP2$vL8!qN01", "bR7&tW4*yU1^zB02", "cK3$vP8!qN5wX9#3", "dT8*yU2^zB9qC4@4", "eW5!qN9wX2#LmR05",
+            "fJ9^zB1qC5@xD3&6", "gN2wX8#LmS4$pQ07", "hK4@xD6&yE8*zF08", "jX7#LmP3$qN9!wV09", "kM5&yF9*zG2^aH10",
+
+            // 201 - 225
+            "lP1!qR3$wS5#tT11", "mQ8^zH2@aJ4&bK12", "nR9*aK3#bL5!cM13", "pS2$bL4!cM6*dN14", "qT3%cM5*dN7^eP15",
+            "rU4^dN6@eP8$fQ16", "sV5@eP7$fQ9*gR17", "tW6$fQ8*gR1#hS18", "uX7*gR9#hS2!jT19", "vY8#hS1!jT3%kU20",
+            "wZ9!jT2%kU4^lV21", "xA1%kU3^lV5@mW22", "yB2^lV4@mW6$nX23", "zC3@mW5$nX7*pY24", "aD4$nX6*pY8#qZ25",
+            "bE5*pY7#qZ9!rA26", "cF6#qZ8!rA1%sB27", "dG7!rA9%sB2^tC28", "eH8%sB1^tC3@uD29", "fJ9^tC2@uD4$vE30",
+            "gK1@uD3$vE5*wF31", "hL2$vE4*wF6#xG32", "jM3*wF5#xG7!yH33", "kN4#xG6!yH8%zJ34", "lP5!yH7%zJ9^aK35",
+
+            // 226 - 250
+            "mQ6%zJ8^aK1@bL36", "nR7^aK9@bL2$cM37", "pS8@bL1$cM3*dN38", "qT9$cM2*dN4#eP39", "rU1*dN3#eP5!fQ40",
+            "sV2#eP4!fQ6%gR41", "tW3!fQ5%gR7^hS42", "uX4%gR6^hS8@jT43", "vY5^hS7@jT9$kU44", "wZ6@jT8$kU1*lV45",
+            "xA7$kU9*lV2#mW46", "yB8*lV1#mW3!nX47", "zC9#mW2!nX4%pY48", "aD1!nX3%pY5^qZ49", "bE2%pY4^qZ6@rA50",
+            "cF3#qZ5!rA7%sB51", "dG4!rA6%sB8^tC52", "eH5%sB7^tC9@uD53", "fJ6^tC8@uD0$vE54", "gK7@uD9$vE1*wF55",
+            "hL8$vE0*wF2#xG56", "jM9*wF1#xG3!yH57", "kN0#xG2!yH4%zJ58", "lP1!yH3%zJ5^aK59", "mQ2%zJ4^aK6@bL60"
+        ];
+
+        const copiedSet = new Set();
+        const passwordStreamEl = document.getElementById('password-stream');
+        const statCopiedEl = document.getElementById('stat-copied');
+        const statTotalEl = document.getElementById('stat-total');
+        const toast = document.getElementById('toast');
+
+        function renderPasswordStream() {
+            passwordStreamEl.innerHTML = '';
+
+            FIXED_PASSWORDS_250.forEach((pass, index) => {
+                const isCopied = copiedSet.has(index);
+
+                const spanItem = document.createElement('span');
+                spanItem.className = `pass-item ${isCopied ? 'copied' : ''}`;
+                spanItem.textContent = pass;
+                spanItem.title = `CAPTURE DATA NODE #${index + 1}`;
+                spanItem.onclick = () => copyPassword(index, pass);
+
+                passwordStreamEl.appendChild(spanItem);
+            });
+
+            updateStats();
+        }
+
+        function copyPassword(index, passwordText) {
+            const tempInput = document.createElement('textarea');
+            tempInput.value = passwordText;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+
+            try {
+                document.execCommand('copy');
+                copiedSet.add(index);
+                renderPasswordStream();
+                showToast(`COPIED NODE #${index + 1}: ${passwordText}`);
+            } catch (err) {
+                showToast('INTERCEPT_FAILED');
+            }
+
+            document.body.removeChild(tempInput);
+        }
+
+        function updateStats() {
+            const total = FIXED_PASSWORDS_250.length;
+            const copied = copiedSet.size;
+
+            if (statTotalEl) statTotalEl.textContent = total;
+            if (statCopiedEl) statCopiedEl.textContent = `${copied} / ${total}`;
+        }
+
+        function resetStats() {
+            copiedSet.clear();
+            renderPasswordStream();
+            showToast("BUFFER PURGED");
+        }
+
+        let toastTimeout;
+        function showToast(message) {
+            const toastMsg = document.getElementById('toast-message');
+            if (toastMsg && toast) {
+                toastMsg.textContent = message;
+
+                toast.classList.remove('-translate-y-24', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => {
+                    toast.classList.remove('translate-y-0', 'opacity-100');
+                    toast.classList.add('-translate-y-24', 'opacity-0');
+                }, 1400);
+            }
+        }
+
+        window.onload = function() {
+            renderPasswordStream();
+        };
+    </script>
+</body>
+</html>
